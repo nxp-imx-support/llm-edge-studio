@@ -1,0 +1,7 @@
+/build
+*.user
+.vscode
+.qtcreator
+*qmd
+*.deb
+llm_edge_studio

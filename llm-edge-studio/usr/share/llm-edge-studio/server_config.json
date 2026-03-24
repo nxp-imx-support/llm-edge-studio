@@ -1,0 +1,25 @@
+{
+    "log_level": "INFO",
+
+    "model_config_path": "/usr/share/llm/{}/",
+    "model_tokenizer_path": "/usr/share/llm/{}/tokenizer",
+    "use_tool_guided_generation": true,
+
+    "available_models": [
+        {
+            "name": "Qwen2.5-Coder-1.5B",
+            "description": "Qwen2.5-Coder-1.5B instance with python code generation support.",
+            "type": "text",
+            "tool_calling": "native",
+            "enabled": false
+        },
+        {
+            "name": "Qwen2.5-7B-Instruct",
+            "description": "Qwen2.5-7B-Instruct",
+            "type": "text",
+            "tool_calling": "native",
+            "max_prompt_size": 2047,
+            "enabled": false
+        }
+    ]
+}
