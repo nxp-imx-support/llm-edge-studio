@@ -19,6 +19,7 @@
 #include <QLoggingCategory>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QQuickWindow>
 #include <QSocketNotifier>
 #include <csignal>
 #include <memory>
@@ -161,6 +162,17 @@ int main(int argc, char* argv[]) {
   // Set application attributes before QGuiApplication construction
   QGuiApplication::setApplicationName(QStringLiteral("LLM Edge Studio"));
   QGuiApplication::setApplicationVersion(APP_VERSION);
+
+  // Ensure a cursor theme is available before the Wayland platform plugin
+  // reads the environment.  On a bare console launch these variables are
+  // typically unset; without them Qt/libwayland-cursor cannot load any cursor
+  // image and the pointer stays invisible even after set_cursor is called.
+  // qputenv only writes the variable when it is not already set so a user-
+  // supplied value in the environment always takes precedence.
+  if (qEnvironmentVariable("XCURSOR_THEME").isEmpty())
+    qputenv("XCURSOR_THEME", "default");
+  if (qEnvironmentVariable("XCURSOR_SIZE").isEmpty())
+    qputenv("XCURSOR_SIZE", "24");
 
   QGuiApplication app(argc, argv);
 

@@ -432,7 +432,7 @@ Window {
                     }
 
                     // Cancel Button (overlays stats bar)
-                    /*IconButton {
+                    IconButton {
                         id: cancelButton
                         width: 100
                         height: 40
@@ -442,15 +442,14 @@ Window {
                             rightMargin: 0
                             bottomMargin: 5
                         }
-                        iconSource: "../images/cancel"
+                        iconSource: "qrc:/images/cancel"
                         iconWidth: 90
                         iconHeight: 30
-                        enabled: mySubmitPrompt.processingLLM
-                        visible: root.cancelSupport
-                                 && mySubmitPrompt.processingLLM
+                        enabled: false //mySubmitPrompt.processingLLM
+                        visible: false //mySubmitPrompt.cancelSupport && mySubmitPrompt.processingLLM
                         opacity: enabled ? 1.0 : 0.3
                         onClicked: mySubmitPrompt.stopLlm()
-                    }*/
+                    }
                 }
 
                 // Model Selector Bar
@@ -864,10 +863,16 @@ Window {
         property int iconWidth: 40
         property int iconHeight: 40
 
-        icon.source: down ? iconSource + "_pressed.png" : iconSource + ".png"
-        icon.width: iconWidth
-        icon.height: iconHeight
         display: AbstractButton.IconOnly
+        contentItem: Image {
+            source: iconBtn.down ? iconBtn.iconSource + "_pressed.png"
+                                 : iconBtn.iconSource + ".png"
+            width: iconBtn.iconWidth
+            height: iconBtn.iconHeight
+            fillMode: Image.PreserveAspectFit
+            smooth: true
+            antialiasing: true
+        }
 
         background: Rectangle {
             color: "transparent"

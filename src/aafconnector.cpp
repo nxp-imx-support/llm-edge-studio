@@ -163,10 +163,40 @@ void AAFConnector::sendVisionPrompt(const QString &prompt,
 }
 
 void AAFConnector::cancelRequest() {
-  cleanupCurrentReply();
-  setProcessingState(false);
-  m_timeoutTimer->stop();
-  qCDebug(lcConnector) << "Request cancelled";
+  if (m_currentReply) {
+      qCDebug(lcConnector) << "Cancelling current request...";
+
+      QString modelId = getCurrentModelId();
+
+      // Disconnect signals to avoid processing partial data
+      disconnect(m_currentReply, nullptr, this, nullptr);
+
+      // Abort the network request
+      m_currentReply->abort();
+      //setProcessingState(false);
+
+      // Clean up
+      m_currentReply->deleteLater();
+      m_currentReply = nullptr;
+
+      // Stop timeout timer
+      m_timeoutTimer->stop();
+      //qCDebug(lcConnector) << "Request cancelled";
+
+      // Reset processing state
+      setProcessingState(false);
+      qCDebug(lcConnector) << "Request cancelled successfully";
+
+      // Send server-side cancellation request
+      if (!modelId.isEmpty()) {
+        sendServerCancelRequest(modelId);
+      }
+
+      // Emit cancellation signal
+      Q_EMIT inferenceCancelled();
+  } else {
+      qCDebug(lcConnector) << "No active request to cancel";
+  }
 }
 
 // ============================================================================
@@ -1018,6 +1048,50 @@ void AAFConnector::handleModelStatusReply() {
     emit modelLoadCompleted(modelName);
   } else {
     emit modelStillLoading(modelName, 0);
+  }
+
+  reply->deleteLater();
+}
+
+// ============================================================================
+// Private - Server-Side Cancellation
+// ============================================================================
+
+void AAFConnector::sendServerCancelRequest(const QString &modelName) {
+  if (modelName.isEmpty()) {
+    qCWarning(lcConnector) << "Cannot send cancel request: empty model name";
+    return;
+  }
+
+  qCDebug(lcConnector) << "Sending server-side cancel request for model:" << modelName;
+
+  QUrl url(getServerUrl() + "/v1/models/" + modelName + "/cancel");
+  QNetworkRequest request = createJsonRequest(url);
+
+  QNetworkReply *reply = m_networkManager->post(request, QByteArray());
+  reply->setProperty("modelName", modelName);
+
+  connectReplySignals(reply, &AAFConnector::handleServerCancelReply);
+}
+
+void AAFConnector::handleServerCancelReply() {
+  QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
+  if (!reply) {
+    return;
+  }
+
+  const QString modelName = reply->property("modelName").toString();
+  const int statusCode =
+      reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+
+  qCDebug(lcConnector) << "Server cancel reply for:" << modelName
+                       << "HTTP status:" << statusCode;
+
+  if (reply->error() == QNetworkReply::NoError) {
+    qCDebug(lcConnector) << "Server-side cancellation successful for:" << modelName;
+  } else {
+    qCWarning(lcConnector) << "Server-side cancellation failed:" << reply->errorString();
+    // Don't emit error as client-side cancellation already succeeded
   }
 
   reply->deleteLater();

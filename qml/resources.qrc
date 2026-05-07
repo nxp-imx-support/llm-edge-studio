@@ -4,6 +4,8 @@
         <file>AboutDialog.qml</file>
         <file>ModelConfigPopup.qml</file>
         <file>ModelDownloadDialog.qml</file>
+        <file>../images/cancel.png</file>
+        <file>../images/cancel_pressed.png</file>
         <file>../images/submit.svg</file>
         <file>../images/title.png</file>
         <file>../fonts/Poppins-Bold.ttf</file>

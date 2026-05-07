@@ -138,6 +138,7 @@ class AAFConnector : public QObject {
 
   // Metrics signals
   void metricsReceived(const QString &metrics);
+  void inferenceCancelled();
 
   // Devices signals
   void devicesReceived(const QStringList &endpointNames);
@@ -193,6 +194,10 @@ class AAFConnector : public QObject {
   // State management
   void setProcessingState(bool processing);
   void setConnectionState(bool connected);
+
+  // Server-Side Cancellation
+  void sendServerCancelRequest(const QString &modelName);
+  void handleServerCancelReply();
 
   // Utility methods
   void cleanupCurrentReply();

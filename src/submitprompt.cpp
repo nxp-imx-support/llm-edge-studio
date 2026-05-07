@@ -174,6 +174,13 @@ void SubmitPrompt::connectSignals() {
             emit endpointNamesChanged();
           });
 
+  connect(m_aafConnector, &AAFConnector::inferenceCancelled, this,
+          [this]() {
+            qCWarning(lcSubmitPrompt) << "Inference request cancelled completed";
+            setProcessingLLM(false);
+            cleanGUI();
+          });
+
   // Start connection and fetch devices once
   m_aafConnector->connectToServer();
   m_aafConnector->requestDevices();
@@ -195,9 +202,9 @@ void SubmitPrompt::stopLlm() {
     return;
   }
 
+  qCDebug(lcSubmitPrompt) << "LLM processing stopped";
   m_aafConnector->cancelRequest();
   emit triggerStopLlm();
-  qCDebug(lcSubmitPrompt) << "LLM processing stopped";
 }
 
 void SubmitPrompt::ejectModel() {
