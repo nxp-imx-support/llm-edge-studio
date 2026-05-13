@@ -108,11 +108,67 @@ Window {
             }
         }
     }
+
+     // Check on completion if we should show download dialog
+    Component.onCompleted: {
+        checkAndShowDownloadDialog()
+    }
+
+    // Function to check if download dialog should be shown
+    function checkAndShowDownloadDialog() {
+        if (!mySubmitPrompt) {
+            return
+        }
+
+        var modelsCount = mySubmitPrompt.getAvailableModels().length
+        var isLoading = mySubmitPrompt.modelsLoading
+        var isDownloading = mySubmitPrompt.isDownloadingModels
+        if (modelsCount === 0 && !isLoading && !isDownloading) {
+            console.log("[Main.qml] No models found, opening download dialog")
+            modelDownloadDialog.open()
+        }
+    }
+
     // ═══════════════════════════════════════════════════════════════
     // DIALOGS
     // ═══════════════════════════════════════════════════════════════
     AboutDialog {
         id: aboutDialog
+    }
+
+    ModelDownloadDialog {
+        id: modelDownloadDialog
+        submitPrompt: mySubmitPrompt
+        anchors.centerIn: parent
+    }
+
+    // Show dialog when models list is empty
+    Connections {
+        target: mySubmitPrompt
+        function onAvailableModelsChanged() {
+            console.log("[QML] Available models changed, count:",
+                       mySubmitPrompt.getAvailableModels().length)
+
+            // Auto-open dialog if no models and not already downloading
+            if (mySubmitPrompt.getAvailableModels().length === 0 &&
+                !mySubmitPrompt.modelsLoading &&
+                !mySubmitPrompt.isDownloadingModels) {
+                console.log("[QML] No models found, opening download dialog")
+                modelDownloadDialog.open()
+            }
+        }
+
+        function onModelsLoadingErrorChanged() {
+            console.log("[QML] Models loading error:",
+                       mySubmitPrompt.modelsLoadingError)
+
+            // Also check when there's an error loading models
+            if (mySubmitPrompt.modelsLoadingError !== "" &&
+                mySubmitPrompt.getAvailableModels().length === 0) {
+                console.log("[QML] Models loading failed, opening download dialog")
+                modelDownloadDialog.open()
+            }
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -516,8 +572,8 @@ Window {
                             height: 36
                             text: "Load"
                             accentColor: theme.accentSecondary
-                            enabled: !mySubmitPrompt.modelLoaded
-                                     && !mySubmitPrompt.loadModel
+                            enabled: !mySubmitPrompt.modelLoaded &&
+                                     !mySubmitPrompt.loadModel
                             onClicked: {
                                 progressBarModel.value = 0
                                 mySubmitPrompt.setLoadModel(true)
@@ -530,8 +586,8 @@ Window {
                             height: 36
                             text: "Eject"
                             accentColor: theme.accentWarning
-                            enabled: mySubmitPrompt.modelLoaded
-                                     && !mySubmitPrompt.processingLLM
+                            enabled: mySubmitPrompt.modelLoaded &&
+                                    !mySubmitPrompt.processingLLM
                             onClicked: mySubmitPrompt.ejectModel()
                         }
                     }

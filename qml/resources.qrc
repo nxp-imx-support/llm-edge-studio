@@ -2,6 +2,7 @@
     <qresource prefix="/">
         <file>Main.qml</file>
         <file>AboutDialog.qml</file>
+        <file>ModelDownloadDialog.qml</file>
         <file>../images/submit.svg</file>
         <file>../images/title.png</file>
         <file>../fonts/Poppins-Bold.ttf</file>

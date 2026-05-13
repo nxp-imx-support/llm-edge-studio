@@ -15,6 +15,7 @@
 
 #include <QList>
 #include <QObject>
+#include <QProcess>
 #include <QString>
 #include <QStringList>
 
@@ -70,6 +71,11 @@ class SubmitPrompt : public QObject {
   Q_PROPERTY(QString currentEndpoint READ currentEndpoint NOTIFY
                  currentEndpointChanged FINAL)
 
+  Q_PROPERTY(bool isDownloadingModels READ isDownloadingModels NOTIFY isDownloadingModelsChanged)
+  Q_PROPERTY(int downloadProgress READ downloadProgress NOTIFY downloadProgressChanged)
+  Q_PROPERTY(QString downloadStatus READ downloadStatus NOTIFY downloadStatusChanged)
+  Q_PROPERTY(bool hasDownloadError READ hasDownloadError NOTIFY hasDownloadErrorChanged)
+
  public:
   /**
    * @brief Construct a new SubmitPrompt object
@@ -95,6 +101,8 @@ class SubmitPrompt : public QObject {
   Q_INVOKABLE QStringList getAvailableModels() const;
   Q_INVOKABLE void refreshModelsList();
   Q_INVOKABLE void killConnectorProcess();
+  Q_INVOKABLE void downloadMissingModels();
+  Q_INVOKABLE void cancelDownload();
 
   // Getters (const correctness)
   QString promptText() const;
@@ -113,6 +121,10 @@ class SubmitPrompt : public QObject {
   QString modelsLoadingError() const;
   int modelLoadProgress() const;
   QString currentEndpoint() const;
+  bool isDownloadingModels() const;
+  int downloadProgress() const;
+  QString downloadStatus() const;
+  bool hasDownloadError() const;
 
  signals:
   // Property change notifications
@@ -133,6 +145,11 @@ class SubmitPrompt : public QObject {
   void availableModelsChanged();
   void currentEndpointChanged();
   void submitButtonEnabledChanged();
+  void isDownloadingModelsChanged();
+  void downloadProgressChanged();
+  void downloadStatusChanged();
+  void hasDownloadErrorChanged();
+  void modelDownloadCompleted();
 
   // Internal signal for stopping LLM processing
   void triggerStopLlm();
@@ -165,6 +182,10 @@ class SubmitPrompt : public QObject {
   void onModelsListReceived(const QList<ModelInfo> &models);
   void onModelsListError(const QString &error);
 
+  void handleDownloadFinished(int exitCode, QProcess::ExitStatus exitStatus);
+  void handleDownloadError(QProcess::ProcessError error);
+  void handleDownloadOutput();
+
  private:
   // Helper methods
   void connectSignals();
@@ -174,6 +195,12 @@ class SubmitPrompt : public QObject {
   void cleanGUI();
   QString formatModelName(const QString &modelName) const;
   QString formatEndpointName(int endpoint, const QString &group) const;
+
+  void setHasDownloadError(const bool &error);
+  void setIsDownloadingModels(const bool downloading);
+  void setDownloadProgress(const int);
+  void setDownloadStatus(const QString &status);
+  void downloadNextModel();
 
   // UI state
   QString m_promptText;
@@ -201,6 +228,14 @@ class SubmitPrompt : public QObject {
   bool m_modelLoaded{false};
   bool m_modelsLoading{true};
   bool m_submitButtonEnabled{true};
+
+  bool m_isDownloadingModels;
+  int m_downloadProgress;
+  QString m_downloadStatus;
+  bool m_hasDownloadError;
+  QProcess *m_downloadProcess;
+  QStringList m_modelsToDownload;
+  int m_currentDownloadIndex;
 
   // AAF Connector - owned by this object via Qt parent-child relationship
   AAFConnector *m_aafConnector{nullptr};
