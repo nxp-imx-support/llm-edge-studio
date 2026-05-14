@@ -16,6 +16,7 @@ TOOLCHAIN_PATH="$1"
 BUILD_DIR="build"
 PACKAGE_DIR="llm-edge-studio"
 BIN_NAME="llm_edge_studio"
+BUILD_TYPE="Release"
 
 RED='\033[1;31m'
 NC='\033[0m' # No Color
@@ -51,7 +52,7 @@ cd "$BUILD_DIR"
 
 # Run CMake
 echo " $WRENCH Running CMake..."
-cmake -DCMAKE_BUILD_TYPE=Release .. || {
+cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} .. || {
 	echo -e "${RED}ERROR:${NC} CMake failed for $PACKAGE_DIR"
 	exit 1
 }
