@@ -46,7 +46,7 @@ if ! pgrep -f "aaf-connector" > /dev/null; then
     > "$CONNECTOR_LOG"
 
     nohup bash -c "
-        exec aaf-connector --host 0.0.0.0 --port 8000
+        exec aaf-connector --host 0.0.0.0 --port 8000 --config /usr/share/llm-edge-studio/server_config.json
     " > "$CONNECTOR_LOG" 2>&1 &
 
     echo $! > "$CONNECTOR_PID_FILE"

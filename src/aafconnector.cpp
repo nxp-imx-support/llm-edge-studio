@@ -38,6 +38,7 @@ constexpr int DEFAULT_MAX_PROMPT_SIZE = 2048;
 constexpr const char *ENDPOINT_CHAT_COMPLETIONS = "/v1/chat/completions";
 constexpr const char *ENDPOINT_MODELS = "/v1/models";
 constexpr const char *ENDPOINT_METRICS = "/metrics/";
+constexpr const char *ENDPOINT_DEVICES = "/v1/devices";
 
 // JSON keys
 constexpr const char *JSON_KEY_MODEL = "model";
@@ -49,6 +50,7 @@ constexpr const char *JSON_KEY_CHOICES = "choices";
 constexpr const char *JSON_KEY_DELTA = "delta";
 constexpr const char *JSON_KEY_TYPE = "type";
 constexpr const char *JSON_KEY_NAME = "name";
+constexpr const char *JSON_KEY_ENDPOINT = "endpoint";
 constexpr const char *JSON_KEY_TOOL_CALLING = "tool_calling";
 
 // Stream markers
@@ -200,7 +202,7 @@ void AAFConnector::loadModelsFromConfig(const QString &configPath) {
   }
 }
 
-void AAFConnector::setModelById(const QString &modelId) {
+void AAFConnector::setModelById(const QString &modelId, const int &endpoint) {
   if (modelId.isEmpty()) {
     qCWarning(lcConnector) << "Attempted to set empty model ID";
     emit modelOperationError("Model ID cannot be empty");
@@ -217,10 +219,11 @@ void AAFConnector::setModelById(const QString &modelId) {
   locker.unlock();
 
   qCDebug(lcConnector) << "Setting model to:" << modelId;
-  loadModel(modelId);
+  loadModel(modelId, endpoint);
 }
 
 void AAFConnector::loadModel(const QString &modelName,
+                             const int &endpoint,
                              const QString &toolCalling) {
   if (modelName.isEmpty()) {
     emit modelOperationError("Empty model name provided");
@@ -235,6 +238,7 @@ void AAFConnector::loadModel(const QString &modelName,
 
   QJsonObject payload;
   payload[JSON_KEY_NAME] = modelName;
+  payload[JSON_KEY_ENDPOINT] = endpoint;
   payload[JSON_KEY_TOOL_CALLING] = toolCalling;
 
   QByteArray jsonData = QJsonDocument(payload).toJson(QJsonDocument::Compact);
@@ -265,7 +269,7 @@ void AAFConnector::removeModel(const QString &modelName) {
 }
 
 // ============================================================================
-// Public API - Metrics
+// Public API - Metrics, Devices
 // ============================================================================
 
 void AAFConnector::requestMetrics(const QString &modelName) {
@@ -277,6 +281,14 @@ void AAFConnector::requestMetrics(const QString &modelName) {
 
   connectReplySignals(reply, &AAFConnector::handleMetricsReply);
   qCDebug(lcConnector) << "Metrics request sent to:" << request.url();
+}
+
+void AAFConnector::requestDevices() {
+  qCDebug(lcConnector) << "Fetching devices from:" << getServerUrl() + ENDPOINT_DEVICES;
+
+  QNetworkReply *reply = m_networkManager->get(
+      createJsonRequest(QUrl(getServerUrl() + ENDPOINT_DEVICES)));
+  connect(reply, &QNetworkReply::finished, this, &AAFConnector::handleDevicesReply);
 }
 
 // ============================================================================
@@ -663,7 +675,7 @@ void AAFConnector::onRequestTimeout() {
 }
 
 // ============================================================================
-// Private - Metrics Handling
+// Private - API Handling
 // ============================================================================
 
 void AAFConnector::handleMetricsReply() {
@@ -696,6 +708,7 @@ void AAFConnector::handleMetricsReply() {
 
   reply->deleteLater();
 }
+
 QString AAFConnector::formatMetrics(const QJsonObject &metrics) const {
   if (metrics.isEmpty()) {
     return QString();
@@ -745,6 +758,64 @@ QString AAFConnector::formatMetrics(const QJsonObject &metrics) const {
 
   return lines.join(" | ");
 }
+
+void AAFConnector::handleDevicesReply() {
+  QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
+  if (!reply) return;
+
+  QStringList endpointNames;
+
+  if (reply->error() != QNetworkReply::NoError) {
+    qCWarning(lcConnector) << "Devices request failed:" << reply->errorString()
+                           << "- falling back to PCIe0";
+    endpointNames << QStringLiteral("PCIe0");
+    emit devicesReceived(endpointNames);
+    reply->deleteLater();
+    return;
+  }
+
+  QJsonParseError parseError;
+  const QJsonDocument doc = QJsonDocument::fromJson(reply->readAll(), &parseError);
+
+  if (parseError.error != QJsonParseError::NoError || !doc.isObject()) {
+    qCWarning(lcConnector) << "Failed to parse devices response:" << parseError.errorString();
+    endpointNames << QStringLiteral("PCIe0");
+    emit devicesReceived(endpointNames);
+    reply->deleteLater();
+    return;
+  }
+
+  // Parse response:
+  // {"device_count":2,"devices":[{"device_id":0,"memory":{"total_human":"16.00 GB",...},...},...]}
+  const QJsonArray devices = doc.object()["devices"].toArray();
+
+  for (const QJsonValue &val : devices) {
+    const QJsonObject dev = val.toObject();
+    const int    id        = dev["device_id"].toInt();
+    const QString totalMem = dev["memory"].toObject()["total_human"].toString();
+
+    // Format: "PCIe0 (16 GB)"
+    const QString name = QStringLiteral("PCIe%1 (%2)").arg(id).arg(totalMem);
+    endpointNames << name;
+
+    qCDebug(lcConnector) << "Device:" << name
+                         << "| Used:" << dev["memory"].toObject()["used_human"].toString()
+                         << "/" << totalMem
+                         << QString("(%1%)")
+                                .arg(dev["memory"].toObject()["utilization_percent"].toDouble(),
+                                     0, 'f', 1);
+  }
+
+  if (endpointNames.isEmpty()) {
+    qCWarning(lcConnector) << "No devices parsed, falling back to PCIe0";
+    endpointNames << QStringLiteral("PCIe0");
+  }
+
+  qCDebug(lcConnector) << "Endpoint names:" << endpointNames;
+  emit devicesReceived(endpointNames);
+  reply->deleteLater();
+}
+
 // ============================================================================
 // Private - Model Management Handlers
 // ============================================================================

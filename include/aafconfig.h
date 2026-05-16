@@ -49,6 +49,7 @@ constexpr int METRICS_REQUEST_DELAY_MS = 500;
 constexpr const char* ENDPOINT_CHAT_COMPLETIONS = "/v1/chat/completions";
 constexpr const char* ENDPOINT_MODELS = "/v1/models";
 constexpr const char* ENDPOINT_METRICS = "/metrics/";
+constexpr const char* ENDPOINT_DEVICES = "/v1/devices";
 
 // User agent
 constexpr const char* USER_AGENT = "AAFConnector/1.0";

@@ -29,7 +29,6 @@ Window {
     // ═══════════════════════════════════════════════════════════════
     // CONFIGURATION
     // ═══════════════════════════════════════════════════════════════
-    readonly property bool multiEndpoint: false
     readonly property bool cancelSupport: false
 
     // ═══════════════════════════════════════════════════════════════
@@ -544,15 +543,16 @@ Window {
 
                         StyledComboBox {
                             id: endpointSelector
-                            width: 120
+                            width: 200
                             height: 32
-                            model: root.multiEndpoint ? ["USB", "PCIe0", "PCIe1", "All"] : ["PCIe0"]
-                            currentIndex: root.multiEndpoint ? 1 : 0
-                            enabled: !mySubmitPrompt.modelLoaded && !mySubmitPrompt.loadModel && !mySubmitPrompt.processingLLM
+                            model: mySubmitPrompt.endpointNames
+                            currentIndex: 0
+                            enabled: !mySubmitPrompt.modelLoaded &&
+                                     !mySubmitPrompt.loadModel &&
+                                     !mySubmitPrompt.processingLLM
                             onActivated: function (index) {
-                                console.log("[QML] Endpoint changed to:",
-                                            currentText)
-                                mySubmitPrompt.setCurrentEndpoint(currentText)
+                                console.log("[QML] Endpoint changed to:", currentText)
+                                mySubmitPrompt.initializeEndpoint(index, currentText)
                             }
                         }
                     }

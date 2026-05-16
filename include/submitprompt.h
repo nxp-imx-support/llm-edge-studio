@@ -70,6 +70,7 @@ class SubmitPrompt : public QObject {
                  modelsLoadingErrorChanged FINAL)
   Q_PROPERTY(QString currentEndpoint READ currentEndpoint NOTIFY
                  currentEndpointChanged FINAL)
+  Q_PROPERTY(QStringList endpointNames READ endpointNames NOTIFY endpointNamesChanged)
 
   Q_PROPERTY(bool isDownloadingModels READ isDownloadingModels NOTIFY isDownloadingModelsChanged)
   Q_PROPERTY(int downloadProgress READ downloadProgress NOTIFY downloadProgressChanged)
@@ -103,6 +104,7 @@ class SubmitPrompt : public QObject {
   Q_INVOKABLE void killConnectorProcess();
   Q_INVOKABLE void downloadMissingModels();
   Q_INVOKABLE void cancelDownload();
+  Q_INVOKABLE void initializeEndpoint(int endpoint, const QString &group);
 
   // Getters (const correctness)
   QString promptText() const;
@@ -125,6 +127,7 @@ class SubmitPrompt : public QObject {
   int downloadProgress() const;
   QString downloadStatus() const;
   bool hasDownloadError() const;
+  QStringList endpointNames() const;
 
  signals:
   // Property change notifications
@@ -150,6 +153,7 @@ class SubmitPrompt : public QObject {
   void downloadStatusChanged();
   void hasDownloadErrorChanged();
   void modelDownloadCompleted();
+  void endpointNamesChanged();
 
   // Internal signal for stopping LLM processing
   void triggerStopLlm();
@@ -190,7 +194,6 @@ class SubmitPrompt : public QObject {
   // Helper methods
   void connectSignals();
   void initializeDefaults();
-  void initializeEndpoint(int endpoint, const QString &group);
   bool validateModelIndex(int index) const;
   void cleanGUI();
   QString formatModelName(const QString &modelName) const;
@@ -220,6 +223,7 @@ class SubmitPrompt : public QObject {
   int m_modelLoadTime{0};
   int m_modelLoadProgress{0};
   int m_TTFT{0};
+  int m_endpoint;
 
   // Flags
   bool m_processingLLM{false};
@@ -236,6 +240,7 @@ class SubmitPrompt : public QObject {
   QProcess *m_downloadProcess;
   QStringList m_modelsToDownload;
   int m_currentDownloadIndex;
+  QStringList m_endpointNames;
 
   // AAF Connector - owned by this object via Qt parent-child relationship
   AAFConnector *m_aafConnector{nullptr};

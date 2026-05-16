@@ -88,12 +88,15 @@ class AAFConnector : public QObject {
 
   // Model management
   void loadModelsFromConfig(const QString &configPath);
-  void setModelById(const QString &modelId);
-  void loadModel(const QString &modelName, const QString &toolCalling = "");
+  void setModelById(const QString &modelId, const int &endpoint);
+  void loadModel(const QString &modelName, const int &endpoint, const QString &toolCalling = "");
   void removeModel(const QString &modelName);
 
   // Metrics
   void requestMetrics(const QString &modelName = QString());
+
+  // Devices
+  void requestDevices();
 
   // Getters (thread-safe)
   QString getServerUrl() const;
@@ -132,6 +135,9 @@ class AAFConnector : public QObject {
   // Metrics signals
   void metricsReceived(const QString &metrics);
 
+  // Devices signals
+  void devicesReceived(const QStringList &endpointNames);
+
  private slots:
   // Network handlers
   void handleNetworkReply();
@@ -146,6 +152,9 @@ class AAFConnector : public QObject {
 
   // Metrics handlers
   void handleMetricsReply();
+
+  // Device handlers
+  void handleDevicesReply();
 
  private:
   // Configuration parsing

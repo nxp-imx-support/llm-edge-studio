@@ -82,13 +82,14 @@ void SubmitPrompt::initializeDefaults() {
   }
 }
 
-void SubmitPrompt::initializeEndpoint(int endpoint, const QString &group) {
+void SubmitPrompt::initializeEndpoint(int endpoint, const QString &endpointName) {
   // Format and set the initial endpoint display string
-  m_currentEndpoint = formatEndpointName(endpoint, group);
-  qCDebug(lcSubmitPrompt) << "Initial endpoint set to:" << m_currentEndpoint;
-
-  // Note: If AAFConnector needs endpoint/group configuration, pass it here
-  // For example: m_aafConnector->setEndpoint(endpoint, group);
+  if(m_currentEndpoint == endpointName && m_endpoint == endpoint) {
+    return;
+  }
+  m_currentEndpoint = endpointName;
+  m_endpoint = endpoint;
+  qCDebug(lcSubmitPrompt) << "Endpoint set to:" << m_currentEndpoint;
 }
 
 void SubmitPrompt::connectSignals() {
@@ -164,8 +165,16 @@ void SubmitPrompt::connectSignals() {
             setModelLoaded(false);
           });
 
-  // Start connection
+  connect(m_aafConnector, &AAFConnector::devicesReceived,
+          this, [this](const QStringList &names) {
+            qCDebug(lcSubmitPrompt) << "Endpoints populated:" << names;
+            m_endpointNames = names;
+            emit endpointNamesChanged();
+          });
+
+  // Start connection and fetch devices once
   m_aafConnector->connectToServer();
+  m_aafConnector->requestDevices();
 }
 
 // ============================================================================
@@ -293,6 +302,8 @@ bool SubmitPrompt::isDownloadingModels() const { return m_isDownloadingModels; }
 int SubmitPrompt::downloadProgress() const { return m_downloadProgress; }
 QString SubmitPrompt::downloadStatus() const { return m_downloadStatus; }
 bool SubmitPrompt::hasDownloadError() const {return m_hasDownloadError; }
+QStringList SubmitPrompt::endpointNames() const { return m_endpointNames; }
+
 
 // ============================================================================
 // Setters
@@ -374,9 +385,11 @@ void SubmitPrompt::setLoadModel(bool newLoadModel) {
       validateModelIndex(m_currentModelIndex)) {
     cleanGUI();
     const ModelInfo &selectedModel = m_availableModels[m_currentModelIndex];
-    qCDebug(lcSubmitPrompt) << "Loading model:" << selectedModel.name
-                            << "Type:" << selectedModel.type;
-    m_aafConnector->setModelById(selectedModel.name);
+    qCDebug(lcSubmitPrompt) << "Loading model:" << selectedModel.name << "\n"
+                            << "Type:" << selectedModel.type << "\n"
+                            << "Endpoint:" << m_currentEndpoint << "\n"
+                            << "device:" << m_endpoint << "\n";
+    m_aafConnector->setModelById(selectedModel.name, m_endpoint);
   }
 
   emit loadModelChanged();
@@ -447,9 +460,6 @@ void SubmitPrompt::setCurrentEndpoint(const QString &endpoint) {
                           << "to" << endpoint;
   m_currentEndpoint = endpoint;
   emit currentEndpointChanged();
-
-  // Note: If AAFConnector needs to be notified of endpoint changes, do it here
-  // For example: m_aafConnector->setEndpoint(endpoint);
 }
 
 // ============================================================================
