@@ -927,8 +927,6 @@ void AAFConnector::checkModelStatus(const QString &modelName) {
     return;
   }
 
-  qCDebug(lcConnector) << "Checking model status for:" << modelName;
-
   QNetworkRequest request = createModelStatusRequest(modelName);
   QNetworkReply *reply = m_networkManager->get(request);
   reply->setProperty("modelName", modelName);

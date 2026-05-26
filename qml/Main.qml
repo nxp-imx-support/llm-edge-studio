@@ -151,8 +151,8 @@ Window {
             // Auto-open dialog if no models and not already downloading
             if (mySubmitPrompt.getAvailableModels().length === 0 &&
                 !mySubmitPrompt.modelsLoading &&
-                !mySubmitPrompt.isDownloadingModels) {
-                console.log("[QML] No models found, opening download dialog")
+                !mySubmitPrompt.isDownloadingModels &&
+                !mySubmitPrompt.userCancelledDownload) {
                 modelDownloadDialog.open()
             }
         }
@@ -163,8 +163,15 @@ Window {
 
             // Also check when there's an error loading models
             if (mySubmitPrompt.modelsLoadingError !== "" &&
-                mySubmitPrompt.getAvailableModels().length === 0) {
-                console.log("[QML] Models loading failed, opening download dialog")
+                mySubmitPrompt.getAvailableModels().length === 0 &&
+                !mySubmitPrompt.userCancelledDownload) {
+                modelDownloadDialog.open()
+            }
+        }
+
+        function checkAndShowDownloadDialog() {
+            if (modelsCount === 0 && !isLoading && !isDownloading &&
+            !mySubmitPrompt.userCancelledDownload) {
                 modelDownloadDialog.open()
             }
         }
@@ -490,7 +497,10 @@ Window {
                             height: 32
                             model: mySubmitPrompt.getAvailableModels()
                             currentIndex: mySubmitPrompt.currentModelIndex
-                            enabled: !mySubmitPrompt.modelLoaded && !mySubmitPrompt.processingLLM && !mySubmitPrompt.loadModel
+                            enabled: !mySubmitPrompt.modelLoaded &&
+                                     !mySubmitPrompt.processingLLM &&
+                                     !mySubmitPrompt.loadModel &&
+                                     mySubmitPrompt.currentModelIndex >= 0
 
                             Component.onCompleted: {
                                 console.log("[QML] ModelSelector initialized")
@@ -573,7 +583,8 @@ Window {
                             text: "Load"
                             accentColor: theme.accentSecondary
                             enabled: !mySubmitPrompt.modelLoaded &&
-                                     !mySubmitPrompt.loadModel
+                                     !mySubmitPrompt.loadModel &&
+                                     mySubmitPrompt.currentModelIndex >= 0
                             onClicked: {
                                 progressBarModel.value = 0
                                 mySubmitPrompt.setLoadModel(true)
@@ -589,6 +600,60 @@ Window {
                             enabled: mySubmitPrompt.modelLoaded &&
                                     !mySubmitPrompt.processingLLM
                             onClicked: mySubmitPrompt.ejectModel()
+                        }
+
+                        Button {
+                            id: gearButton
+                            width: 36
+                            height: 36
+                            enabled: !mySubmitPrompt.modelLoaded &&
+                                     !mySubmitPrompt.loadModel &&
+                                     !mySubmitPrompt.processingLLM
+                            opacity: enabled ? 1.0 : 0.3
+                            hoverEnabled: true
+
+                            onClicked: modelConfigPopup.open()
+
+                            background: Rectangle {
+                                color: gearButton.hovered ? theme.bgTertiary : "transparent"
+                                radius: theme.smallRadius
+                                border.color: gearButton.hovered ? theme.accentPrimary : theme.borderInactive
+                                border.width: theme.borderWidth
+
+                                Behavior on color {
+                                    ColorAnimation { duration: theme.animationFast }
+                                }
+                                Behavior on border.color {
+                                    ColorAnimation { duration: theme.animationFast }
+                                }
+                            }
+
+                            contentItem: Text {
+                                text: "⚙"
+                                font.pixelSize: 20
+                                color: gearButton.hovered ? theme.accentPrimary : theme.textSecondary
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+
+                                Behavior on color {
+                                    ColorAnimation { duration: theme.animationFast }
+                                }
+
+                                RotationAnimation on rotation {
+                                    running: gearButton.hovered
+                                    from: 0; to: 360
+                                    duration: 1500
+                                    loops: Animation.Infinite
+                                }
+                            }
+
+                            ToolTip {
+                                visible: gearButton.hovered
+                                text: "Model loading configuration"
+                                delay: 500
+                                font.pixelSize: theme.fontMicro
+                                font.family: "Poppins"
+                            }
                         }
                     }
                 }
@@ -785,6 +850,156 @@ Window {
                         duration: theme.animationFast
                         easing.type: Easing.OutQuad
                     }
+                }
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // MODEL CONFIG POPUP
+    // ═══════════════════════════════════════════════════════════════
+    Popup {
+        id: modelConfigPopup
+        width: 380
+        height: 320
+        modal: true
+        focus: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        // Anchor to the gear button dynamically
+        x: (root.width - width) / 2
+        y: (root.height - height) / 2
+
+        background: Rectangle {
+            color: theme.bgSecondary
+            border.color: theme.accentPrimary
+            border.width: theme.borderWidth
+            radius: theme.standardRadius
+        }
+
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 20
+            spacing: 16
+
+            // Header
+            Text {
+                text: "⚙  Model Configuration"
+                color: theme.textPrimary
+                font.pixelSize: theme.fontSmall
+                font.family: "Poppins"
+                font.bold: true
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                height: 1
+                color: theme.borderInactive
+            }
+
+            // Temperature
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 10
+                Text {
+                    text: "Temperature:"
+                    color: theme.textSecondary
+                    font.pixelSize: theme.fontMicro
+                    font.family: "Poppins"
+                    Layout.preferredWidth: 130
+                }
+                Slider {
+                    id: temperatureSlider
+                    Layout.fillWidth: true
+                    from: 0.0
+                    to: 2.0
+                    value: mySubmitPrompt.temperature !== undefined ? mySubmitPrompt.temperature : 0.7
+                    stepSize: 0.1
+                    onMoved: mySubmitPrompt.temperature = value
+                }
+                Text {
+                    text: temperatureSlider.value.toFixed(1)
+                    color: theme.accentPrimary
+                    font.pixelSize: theme.fontMicro
+                    font.family: "Poppins"
+                    Layout.preferredWidth: 30
+                }
+            }
+
+            // Max Tokens
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 10
+                Text {
+                    text: "Max Tokens:"
+                    color: theme.textSecondary
+                    font.pixelSize: theme.fontMicro
+                    font.family: "Poppins"
+                    Layout.preferredWidth: 130
+                }
+                Slider {
+                    id: maxTokensSlider
+                    Layout.fillWidth: true
+                    from: 64
+                    to: 4096
+                    value: mySubmitPrompt.maxTokens !== undefined ? mySubmitPrompt.maxTokens : 512
+                    stepSize: 64
+                    onMoved: mySubmitPrompt.maxTokens = value
+                }
+                Text {
+                    text: maxTokensSlider.value.toFixed(0)
+                    color: theme.accentPrimary
+                    font.pixelSize: theme.fontMicro
+                    font.family: "Poppins"
+                    Layout.preferredWidth: 40
+                }
+            }
+
+            // Context Length
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 10
+                Text {
+                    text: "Context Length:"
+                    color: theme.textSecondary
+                    font.pixelSize: theme.fontMicro
+                    font.family: "Poppins"
+                    Layout.preferredWidth: 130
+                }
+                Slider {
+                    id: contextLengthSlider
+                    Layout.fillWidth: true
+                    from: 512
+                    to: 8192
+                    value: mySubmitPrompt.contextLength !== undefined ? mySubmitPrompt.contextLength : 2048
+                    stepSize: 512
+                    onMoved: mySubmitPrompt.contextLength = value
+                }
+                Text {
+                    text: contextLengthSlider.value.toFixed(0)
+                    color: theme.accentPrimary
+                    font.pixelSize: theme.fontMicro
+                    font.family: "Poppins"
+                    Layout.preferredWidth: 40
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                height: 1
+                color: theme.borderInactive
+            }
+
+            // Close button
+            RowLayout {
+                Layout.fillWidth: true
+                Item { Layout.fillWidth: true }
+                ActionButton {
+                    width: 90
+                    height: 34
+                    text: "Apply"
+                    accentColor: theme.accentSecondary
+                    onClicked: modelConfigPopup.close()
                 }
             }
         }

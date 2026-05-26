@@ -76,6 +76,7 @@ class SubmitPrompt : public QObject {
   Q_PROPERTY(int downloadProgress READ downloadProgress NOTIFY downloadProgressChanged)
   Q_PROPERTY(QString downloadStatus READ downloadStatus NOTIFY downloadStatusChanged)
   Q_PROPERTY(bool hasDownloadError READ hasDownloadError NOTIFY hasDownloadErrorChanged)
+  Q_PROPERTY(bool userCancelledDownload READ userCancelledDownload NOTIFY userCancelledDownloadChanged)
 
  public:
   /**
@@ -127,6 +128,7 @@ class SubmitPrompt : public QObject {
   int downloadProgress() const;
   QString downloadStatus() const;
   bool hasDownloadError() const;
+  bool userCancelledDownload() const;
   QStringList endpointNames() const;
 
  signals:
@@ -153,6 +155,7 @@ class SubmitPrompt : public QObject {
   void downloadStatusChanged();
   void hasDownloadErrorChanged();
   void modelDownloadCompleted();
+  void userCancelledDownloadChanged();
   void endpointNamesChanged();
 
   // Internal signal for stopping LLM processing
@@ -198,6 +201,7 @@ class SubmitPrompt : public QObject {
   void cleanGUI();
   QString formatModelName(const QString &modelName) const;
   QString formatEndpointName(int endpoint, const QString &group) const;
+  QString formatConnectionError() const;
 
   void setHasDownloadError(const bool &error);
   void setIsDownloadingModels(const bool downloading);
@@ -232,6 +236,7 @@ class SubmitPrompt : public QObject {
   bool m_modelLoaded{false};
   bool m_modelsLoading{true};
   bool m_submitButtonEnabled{true};
+  bool m_userCancelledDownload {false};
 
   bool m_isDownloadingModels;
   int m_downloadProgress;

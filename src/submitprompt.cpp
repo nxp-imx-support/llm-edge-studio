@@ -152,8 +152,6 @@ void SubmitPrompt::connectSignals() {
   connect(m_aafConnector, &AAFConnector::modelStillLoading, this,
           [this](const QString &modelName, int progress) {
             Q_UNUSED(modelName)
-            qCDebug(lcSubmitPrompt)
-                << "Model still loading, progress:" << progress << "%";
             setModelLoadProgress(progress);
           });
 
@@ -302,6 +300,7 @@ bool SubmitPrompt::isDownloadingModels() const { return m_isDownloadingModels; }
 int SubmitPrompt::downloadProgress() const { return m_downloadProgress; }
 QString SubmitPrompt::downloadStatus() const { return m_downloadStatus; }
 bool SubmitPrompt::hasDownloadError() const {return m_hasDownloadError; }
+bool SubmitPrompt::userCancelledDownload() const { return m_userCancelledDownload; }
 QStringList SubmitPrompt::endpointNames() const { return m_endpointNames; }
 
 
@@ -531,8 +530,8 @@ void SubmitPrompt::onModelsListError(const QString &error) {
   emit modelsLoadingChanged();
   emit modelsLoadingErrorChanged();
 
-  // Create fallback model only if no models are available try to fetch a fallback model
-  if (m_availableModels.isEmpty()) {
+  // Try to fetch a default model
+  if (m_availableModels.isEmpty() && !m_hasDownloadError) {
     qCDebug(lcSubmitPrompt) << "No models available - user can download manually";
     m_availableModelNames.clear();
     m_availableModels.clear();
@@ -590,6 +589,19 @@ QString SubmitPrompt::formatEndpointName(int endpoint,
   return QStringLiteral("PCIe%1").arg(endpoint);
 }
 
+QString SubmitPrompt::formatConnectionError() const {
+    return QString(
+        "# Connection Error\n\n"
+        "A secure connection to the server could not be established. "
+        "Please try the following steps to fix the issue:\n\n"
+        "1. **Check system clock**: Verify your computer's date and time are correct.\n\n"
+        "2. **Check network access**: Ensure your internet connection is active and "
+        "your firewall or antivirus is not blocking huggingface.co.\n\n"
+        "3. **Disable VPN/Proxy**: If you are on a corporate network or using a VPN, "
+        "try disconnecting temporarily."
+    );
+}
+
 bool SubmitPrompt::validateModelIndex(int index) const {
   return index >= 0 && index < m_availableModels.size();
 }
@@ -603,7 +615,8 @@ void SubmitPrompt::downloadMissingModels() {
     qCWarning(lcSubmitPrompt) << "Download already in progress";
     return;
   }
-
+  m_userCancelledDownload = false;
+  emit userCancelledDownloadChanged();
   qCDebug(lcSubmitPrompt) << "Starting manual model download...";
 
   // Reset state
@@ -675,6 +688,7 @@ void SubmitPrompt::downloadNextModel() {
             << "--repo-id" << modelId;
 
   qCDebug(lcSubmitPrompt) << "Running command:" << program << arguments.join(" ");
+  cleanGUI();
 
   // Start download process
   m_downloadProcess->start(program, arguments);
@@ -764,6 +778,13 @@ void SubmitPrompt::handleDownloadOutput() {
     if (match.hasMatch()) {
       int percent = match.captured(1).toInt();
       setDownloadProgress(percent);
+    } else {
+      if (errorOutput.contains("CERTIFICATE_VERIFY_FAILED", Qt::CaseInsensitive)) {
+          setOutputLlm(formatConnectionError());
+      } else {
+          setOutputLlm(errorOutput);
+      }
+      setHasDownloadError(true);
     }
   }
 }
@@ -774,6 +795,8 @@ void SubmitPrompt::cancelDownload() {
   }
 
   qCDebug(lcSubmitPrompt) << "Cancelling download...";
+  m_userCancelledDownload = true;
+  emit userCancelledDownloadChanged();
 
   m_downloadProcess->kill();
   m_downloadProcess->waitForFinished(3000);
