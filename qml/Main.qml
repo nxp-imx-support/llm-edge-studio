@@ -30,6 +30,7 @@ Window {
     // CONFIGURATION
     // ═══════════════════════════════════════════════════════════════
     readonly property bool cancelSupport: false
+    readonly property bool configSupport: false
 
     // ═══════════════════════════════════════════════════════════════
     // COLOR SCHEME - Minimal Dark Pro
@@ -606,6 +607,7 @@ Window {
                             id: gearButton
                             width: 36
                             height: 36
+                            visible: configSupport
                             enabled: !mySubmitPrompt.modelLoaded &&
                                      !mySubmitPrompt.loadModel &&
                                      !mySubmitPrompt.processingLLM
