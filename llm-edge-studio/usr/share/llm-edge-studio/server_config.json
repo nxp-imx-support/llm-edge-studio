@@ -18,9 +18,9 @@
     "llm_params": {
         "generate_max_tokens": 512,
         "seed": 42,
-        "temperature": 0.0,
-        "top_k": 0,
-        "top_p": 0.0,
+        "temperature": 1.0,
+        "top_k": 50,
+        "top_p": 0.95,
         "repeat_penalty": 1.12,
         "repeat_last_n": 32,
         "ngram_penalty": 10,
