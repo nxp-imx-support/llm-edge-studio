@@ -14,6 +14,9 @@
 #include "submitprompt.h"
 
 #include <QDebug>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QLoggingCategory>
 
 Q_LOGGING_CATEGORY(lcSubmitPrompt, "submit.prompt")
@@ -173,6 +176,7 @@ void SubmitPrompt::connectSignals() {
   // Start connection and fetch devices once
   m_aafConnector->connectToServer();
   m_aafConnector->requestDevices();
+
 }
 
 // ============================================================================
@@ -218,6 +222,9 @@ void SubmitPrompt::ejectModel() {
   setModelLoaded(false);
   setModelLoadProgress(PROGRESS_MIN);
   cleanGUI();
+
+  loadLlmParamsFromConfig(AAFConfig::CONFIG_PATH);
+  qCDebug(lcSubmitPrompt) << "llm_params reset to server_config baseline after eject";
 }
 
 QStringList SubmitPrompt::getAvailableModels() const {
@@ -264,6 +271,8 @@ void SubmitPrompt::submitPrompt() {
   qCDebug(lcSubmitPrompt) << "Submitting prompt, length:"
                           << m_promptText.length();
   cleanGUI();
+  // Push current llm_params into the connector before each request
+  m_aafConnector->setLlmParams(m_llmParams);
   m_aafConnector->sendTextPrompt(m_promptText);
 }
 
@@ -302,6 +311,8 @@ QString SubmitPrompt::downloadStatus() const { return m_downloadStatus; }
 bool SubmitPrompt::hasDownloadError() const {return m_hasDownloadError; }
 bool SubmitPrompt::userCancelledDownload() const { return m_userCancelledDownload; }
 QStringList SubmitPrompt::endpointNames() const { return m_endpointNames; }
+QVariantMap SubmitPrompt::llmParams() const { return m_llmParams; }
+QVariantMap SubmitPrompt::defaultLlmParams() const { return m_defaultLlmParams; }
 
 
 // ============================================================================
@@ -449,6 +460,12 @@ void SubmitPrompt::setCurrentModelIndex(int index) {
 
   qCDebug(lcSubmitPrompt) << "Model index changed to:" << index << "("
                           << currentModelName() << ")";
+
+  // Load llm_params from config once
+  loadLlmParamsFromConfig(AAFConfig::CONFIG_PATH);
+
+  // Load per-model generation params; falls back silently if file not found
+  loadLlmParamsFromModelConfig(m_availableModels[index].name);
 }
 
 void SubmitPrompt::setCurrentEndpoint(const QString &endpoint) {
@@ -837,3 +854,102 @@ void SubmitPrompt::setHasDownloadError(const bool &error){
   m_hasDownloadError = error;
   emit hasDownloadErrorChanged();
 }
+
+// ============================================================================
+// llm_params - runtime configuration
+// ============================================================================
+
+void SubmitPrompt::setLlmParams(const QVariantMap &params) {
+  if (m_llmParams == params) return;
+  m_llmParams = params;
+  emit llmParamsChanged();
+  qCDebug(lcSubmitPrompt) << "llm_params updated:"
+    << "generate_max_tokens=" << m_llmParams.value("generate_max_tokens")
+    << "temperature="         << m_llmParams.value("temperature")
+    << "top_k="               << m_llmParams.value("top_k")
+    << "top_p="               << m_llmParams.value("top_p");
+}
+
+void SubmitPrompt::loadLlmParamsFromConfig(const QString &configPath) {
+  QFile file(configPath);
+  if (!file.open(QIODevice::ReadOnly)) {
+    qCWarning(lcSubmitPrompt) << "Cannot open config for llm_params:" << configPath;
+    return;
+  }
+  const QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+  file.close();
+
+  const QJsonObject llmJson = doc.object().value("llm_params").toObject();
+  if (llmJson.isEmpty()) {
+    qCWarning(lcSubmitPrompt) << "llm_params section not found in" << configPath;
+    return;
+  }
+
+  m_llmParams        = llmJson.toVariantMap();
+  m_defaultLlmParams = m_llmParams;
+  emit llmParamsChanged();
+
+  qCDebug(lcSubmitPrompt) << "Loaded llm_params from default config:"
+    << "generate_max_tokens=" << m_llmParams.value("generate_max_tokens")
+    << "temperature="         << m_llmParams.value("temperature")
+    << "top_k="               << m_llmParams.value("top_k")
+    << "top_p="               << m_llmParams.value("top_p");
+}
+
+void SubmitPrompt::loadLlmParamsFromModelConfig(const QString &modelName) {
+  // Try /usr/share/llm/{model_name}/generation_config.json
+  const QString path = QStringLiteral("%1/%2/generation_config.json")
+                           .arg(AAFConfig::MODEL_PATH, modelName);
+
+  QFile file(path);
+  if (!file.open(QIODevice::ReadOnly)) {
+    qCDebug(lcSubmitPrompt) << "No generation_config.json for" << modelName
+                            << "- keeping server_config.json defaults";
+    return;
+  } else {
+    qCDebug(lcSubmitPrompt) << "Loaded llm_params from " << path << " for model: " << modelName;
+  }
+
+  const QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+  file.close();
+
+  const QJsonObject obj = doc.object();
+  if (obj.isEmpty()) {
+    qCWarning(lcSubmitPrompt) << "Empty generation_config.json for" << modelName;
+    return;
+  }
+
+  // Build a merged map: start from the server_config baseline then overlay
+  // the four editable fields if present in generation_config.json.
+  QVariantMap merged = m_defaultLlmParams;
+
+  auto applyInt = [&](const QString &srcKey, const QString &dstKey) {
+    if (obj.contains(srcKey))
+      merged[dstKey] = obj.value(srcKey).toInt();
+  };
+  auto applyDouble = [&](const QString &srcKey, const QString &dstKey) {
+    if (obj.contains(srcKey))
+      merged[dstKey] = obj.value(srcKey).toDouble();
+  };
+
+  // Map generation_config.json field names to internal llm_params keys.
+  // "max_length" and "max_new_tokens" both map to generate_max_tokens;
+  // prefer max_new_tokens if both are present (more specific).
+  applyInt   ("max_length",         "generate_max_tokens");
+  applyInt   ("max_new_tokens",     "generate_max_tokens");
+  applyDouble("temperature",        "temperature");
+  applyInt   ("top_k",              "top_k");
+  applyDouble("top_p",              "top_p");
+  // Also update non-editable fields when present in the model config
+  applyDouble("repetition_penalty", "repeat_penalty");
+
+  m_llmParams        = merged;
+  m_defaultLlmParams = merged;
+  emit llmParamsChanged();
+
+  qCDebug(lcSubmitPrompt) << "Loaded generation_config.json for" << modelName
+    << "generate_max_tokens=" << m_llmParams.value("generate_max_tokens")
+    << "temperature="         << m_llmParams.value("temperature")
+    << "top_k="               << m_llmParams.value("top_k")
+    << "top_p="               << m_llmParams.value("top_p");
+  }

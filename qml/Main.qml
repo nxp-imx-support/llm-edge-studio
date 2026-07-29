@@ -30,7 +30,7 @@ Window {
     // CONFIGURATION
     // ═══════════════════════════════════════════════════════════════
     readonly property bool cancelSupport: false
-    readonly property bool configSupport: false
+    readonly property bool configSupport: true
 
     // ═══════════════════════════════════════════════════════════════
     // COLOR SCHEME - Minimal Dark Pro
@@ -47,6 +47,7 @@ Window {
         readonly property color textSecondary: "#98989D"
         readonly property color borderActive: "#0A84FF"
         readonly property color borderInactive: "#38383A"
+        readonly property color borderPopup: "#48484A"
 
         // UI Dimensions
         readonly property int brandingHeight: 10
@@ -263,16 +264,11 @@ Window {
                     onClicked: aboutDialog.visible = true
 
                     background: Rectangle {
-                        color: aboutButton.hovered ? theme.accentPrimary : theme.bgSecondary
+                        color: aboutButton.hovered ? theme.borderInactive : theme.bgSecondary
                         radius: theme.smallRadius
                         border.color: theme.textSecondary
                         border.width: theme.borderWidth
-
-                        Behavior on color {
-                            ColorAnimation {
-                                duration: theme.animationFast
-                            }
-                        }
+                        Behavior on color { ColorAnimation { duration: theme.animationFast } }
                     }
 
                     contentItem: Text {
@@ -300,16 +296,11 @@ Window {
                     }
 
                     background: Rectangle {
-                        color: closeButton.hovered ? theme.accentWarning : theme.bgSecondary
+                        color: closeButton.hovered ? theme.borderInactive : theme.bgSecondary
                         radius: theme.smallRadius
                         border.color: theme.textSecondary
                         border.width: theme.borderWidth
-
-                        Behavior on color {
-                            ColorAnimation {
-                                duration: theme.animationFast
-                            }
-                        }
+                        Behavior on color { ColorAnimation { duration: theme.animationFast } }
                     }
 
                     contentItem: Text {
@@ -608,9 +599,7 @@ Window {
                             width: 36
                             height: 36
                             visible: configSupport
-                            enabled: !mySubmitPrompt.modelLoaded &&
-                                     !mySubmitPrompt.loadModel &&
-                                     !mySubmitPrompt.processingLLM
+                            enabled: !mySubmitPrompt.processingLLM
                             opacity: enabled ? 1.0 : 0.3
                             hoverEnabled: true
 
@@ -860,151 +849,10 @@ Window {
     // ═══════════════════════════════════════════════════════════════
     // MODEL CONFIG POPUP
     // ═══════════════════════════════════════════════════════════════
-    Popup {
+    ModelConfigPopup {
         id: modelConfigPopup
-        width: 380
-        height: 320
-        modal: true
-        focus: true
-        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-
-        // Anchor to the gear button dynamically
-        x: (root.width - width) / 2
-        y: (root.height - height) / 2
-
-        background: Rectangle {
-            color: theme.bgSecondary
-            border.color: theme.accentPrimary
-            border.width: theme.borderWidth
-            radius: theme.standardRadius
-        }
-
-        ColumnLayout {
-            anchors.fill: parent
-            anchors.margins: 20
-            spacing: 16
-
-            // Header
-            Text {
-                text: "⚙  Model Configuration"
-                color: theme.textPrimary
-                font.pixelSize: theme.fontSmall
-                font.family: "Poppins"
-                font.bold: true
-            }
-
-            Rectangle {
-                Layout.fillWidth: true
-                height: 1
-                color: theme.borderInactive
-            }
-
-            // Temperature
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 10
-                Text {
-                    text: "Temperature:"
-                    color: theme.textSecondary
-                    font.pixelSize: theme.fontMicro
-                    font.family: "Poppins"
-                    Layout.preferredWidth: 130
-                }
-                Slider {
-                    id: temperatureSlider
-                    Layout.fillWidth: true
-                    from: 0.0
-                    to: 2.0
-                    value: mySubmitPrompt.temperature !== undefined ? mySubmitPrompt.temperature : 0.7
-                    stepSize: 0.1
-                    onMoved: mySubmitPrompt.temperature = value
-                }
-                Text {
-                    text: temperatureSlider.value.toFixed(1)
-                    color: theme.accentPrimary
-                    font.pixelSize: theme.fontMicro
-                    font.family: "Poppins"
-                    Layout.preferredWidth: 30
-                }
-            }
-
-            // Max Tokens
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 10
-                Text {
-                    text: "Max Tokens:"
-                    color: theme.textSecondary
-                    font.pixelSize: theme.fontMicro
-                    font.family: "Poppins"
-                    Layout.preferredWidth: 130
-                }
-                Slider {
-                    id: maxTokensSlider
-                    Layout.fillWidth: true
-                    from: 64
-                    to: 4096
-                    value: mySubmitPrompt.maxTokens !== undefined ? mySubmitPrompt.maxTokens : 512
-                    stepSize: 64
-                    onMoved: mySubmitPrompt.maxTokens = value
-                }
-                Text {
-                    text: maxTokensSlider.value.toFixed(0)
-                    color: theme.accentPrimary
-                    font.pixelSize: theme.fontMicro
-                    font.family: "Poppins"
-                    Layout.preferredWidth: 40
-                }
-            }
-
-            // Context Length
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 10
-                Text {
-                    text: "Context Length:"
-                    color: theme.textSecondary
-                    font.pixelSize: theme.fontMicro
-                    font.family: "Poppins"
-                    Layout.preferredWidth: 130
-                }
-                Slider {
-                    id: contextLengthSlider
-                    Layout.fillWidth: true
-                    from: 512
-                    to: 8192
-                    value: mySubmitPrompt.contextLength !== undefined ? mySubmitPrompt.contextLength : 2048
-                    stepSize: 512
-                    onMoved: mySubmitPrompt.contextLength = value
-                }
-                Text {
-                    text: contextLengthSlider.value.toFixed(0)
-                    color: theme.accentPrimary
-                    font.pixelSize: theme.fontMicro
-                    font.family: "Poppins"
-                    Layout.preferredWidth: 40
-                }
-            }
-
-            Rectangle {
-                Layout.fillWidth: true
-                height: 1
-                color: theme.borderInactive
-            }
-
-            // Close button
-            RowLayout {
-                Layout.fillWidth: true
-                Item { Layout.fillWidth: true }
-                ActionButton {
-                    width: 90
-                    height: 34
-                    text: "Apply"
-                    accentColor: theme.accentSecondary
-                    onClicked: modelConfigPopup.close()
-                }
-            }
-        }
+        theme: theme
+        submitPrompt: mySubmitPrompt
     }
 
     // ═══════════════════════════════════════════════════════════════

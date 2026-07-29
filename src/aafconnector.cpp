@@ -431,10 +431,24 @@ QNetworkRequest AAFConnector::createModelStatusRequest(
 // Private - Payload Creation
 // ============================================================================
 
+void AAFConnector::setLlmParams(const QVariantMap &params) {
+  m_llmParams = params;
+}
+
 QJsonObject AAFConnector::createTextPayload(const QString &prompt) const {
   QJsonObject payload;
   payload[JSON_KEY_MODEL] = getCurrentModelId();
   payload[JSON_KEY_STREAM] = true;
+
+  // Inject user-configurable llm_params into the request payload
+  if (m_llmParams.contains("generate_max_tokens"))
+    payload["max_tokens"] = m_llmParams.value("generate_max_tokens").toInt();
+  if (m_llmParams.contains("temperature"))
+    payload["temperature"] = m_llmParams.value("temperature").toDouble();
+  if (m_llmParams.contains("top_k"))
+    payload["top_k"] = m_llmParams.value("top_k").toInt();
+  if (m_llmParams.contains("top_p"))
+    payload["top_p"] = m_llmParams.value("top_p").toDouble();
 
   QJsonArray messages;
   QJsonObject userMsg;

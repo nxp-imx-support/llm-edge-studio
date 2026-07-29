@@ -18,6 +18,7 @@
 #include <QProcess>
 #include <QString>
 #include <QStringList>
+#include <QVariantMap>
 
 #include "aafconnector.h"
 
@@ -78,6 +79,11 @@ class SubmitPrompt : public QObject {
   Q_PROPERTY(bool hasDownloadError READ hasDownloadError NOTIFY hasDownloadErrorChanged)
   Q_PROPERTY(bool userCancelledDownload READ userCancelledDownload NOTIFY userCancelledDownloadChanged)
 
+  // llm_params - loaded from server_config.json at startup (read-only)
+  Q_PROPERTY(QVariantMap llmParams READ llmParams WRITE setLlmParams NOTIFY llmParamsChanged)
+  // defaultLlmParams - snapshot of the config values; used by Reset
+  Q_PROPERTY(QVariantMap defaultLlmParams READ defaultLlmParams CONSTANT)
+
  public:
   /**
    * @brief Construct a new SubmitPrompt object
@@ -130,6 +136,8 @@ class SubmitPrompt : public QObject {
   bool hasDownloadError() const;
   bool userCancelledDownload() const;
   QStringList endpointNames() const;
+  QVariantMap llmParams() const;
+  QVariantMap defaultLlmParams() const;
 
  signals:
   // Property change notifications
@@ -157,6 +165,7 @@ class SubmitPrompt : public QObject {
   void modelDownloadCompleted();
   void userCancelledDownloadChanged();
   void endpointNamesChanged();
+  void llmParamsChanged();
 
   // Internal signal for stopping LLM processing
   void triggerStopLlm();
@@ -166,6 +175,7 @@ class SubmitPrompt : public QObject {
   void setPromptText(const QString &inputPrompt);
   void setLoadModel(bool newLoadModel);
   void setCurrentModelIndex(int index);
+  void setLlmParams(const QVariantMap &params);
 
  private slots:
   // Internal setters (not exposed to QML)
@@ -208,6 +218,8 @@ class SubmitPrompt : public QObject {
   void setDownloadProgress(const int);
   void setDownloadStatus(const QString &status);
   void downloadNextModel();
+  void loadLlmParamsFromConfig(const QString &configPath);
+  void loadLlmParamsFromModelConfig(const QString &modelName);
 
   // UI state
   QString m_promptText;
@@ -246,6 +258,9 @@ class SubmitPrompt : public QObject {
   QStringList m_modelsToDownload;
   int m_currentDownloadIndex;
   QStringList m_endpointNames;
+
+  QVariantMap m_llmParams;
+  QVariantMap m_defaultLlmParams;
 
   // AAF Connector - owned by this object via Qt parent-child relationship
   AAFConnector *m_aafConnector{nullptr};

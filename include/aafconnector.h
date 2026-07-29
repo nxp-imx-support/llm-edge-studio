@@ -22,6 +22,7 @@
 #include <QObject>
 #include <QString>
 #include <QTimer>
+#include <QVariantMap>
 
 #include "aafconfig.h"
 
@@ -97,6 +98,9 @@ class AAFConnector : public QObject {
 
   // Devices
   void requestDevices();
+
+  // Config LLM Params
+  void setLlmParams(const QVariantMap &params);
 
   // Getters (thread-safe)
   QString getServerUrl() const;
@@ -213,6 +217,7 @@ class AAFConnector : public QObject {
   int m_timeout;
   bool m_isConnected;
   bool m_isProcessing;
+  QVariantMap m_llmParams;
 };
 
 #endif  // AAFCONNECTOR_H
