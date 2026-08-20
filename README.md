@@ -15,59 +15,29 @@
 
 ## 🔎 Overview
 
-Introducing **LLM Edge Studio**: the NXP launcher designed for supported _Large Language Models_ (LLMs) accelerated by the Ara240 DNPU at the edge. This application, compatible with FRDM i.MX 95 and FRDM i.MX 8M Plus, enables rapid interaction with locally running LLMs. It uses the eIQ AAF Connector to communicate with the Ara240 Runtime SDK and provides a user-friendly GUI for model selection and prompt input.
+Experience real-time AI assistance at the edge with **Ara240**, powered by NXP’s **LLM Edge Studio**. This solution enables interactive, text-based conversations driven by advanced generative AI. By running *Large Language Models* (LLMs) locally on the NXP **Ara240** *Discrete Neural Processing Unit* (DNPU), it delivers seamless, high-performance conversational interaction without relying on the cloud.
+Designed to showcase the performance, scalability, and responsiveness of the **Ara240** architecture, this solution demonstrates the power of localized intelligence by executing LLM workloads directly at the edge, eliminating cloud dependency and drastically reducing latency. The result is secure, real-time conversational AI engineered for next-generation smart kiosks, industrial control interfaces, and intelligent edge systems.
 
-```mermaid
-graph LR
-    subgraph FRDM_iMX["**FRDM i.MX Platform (Host)**"]
-        subgraph LLM_Studio["**LLM Edge Studio**"]
-            UI["GUI<br/>Model Selector & Prompt Input"]
-            Client["eIQ AAF Connector<br/>(HTTP Client)"]
-        end
-        
-        subgraph AAF_Server["**eIQ AAF Connector**"]
-            API["REST API Server"]
-            Optimum["Optimum Ara"]
-        end
-        subgraph proxy["**Ara240 Runtime SDK**"]
-            LB["Proxy"]
-        end
-    end
-    
-    subgraph Accelerator["**Ara240 DNPU**"]
-        Model["Loaded LLM<br/>(model.dvm)"]
-    end
-    
-    %% Application Layer Connections
-    UI <--> Client
-    Client -->|HTTP POST/GET| API
-    
-    %% Server Layer Connections
-    API -->|SSE Stream| Client
-    API -->|Prompt| Optimum
-    Optimum <-->|socket| proxy
-    
-    %% Hardware Communication
-    proxy <-->|PCIe | Model
-    
-    %% Response Flow
-    Optimum -.->|Streaming Tokens| API
+ <div align="center">
+    <br></br>
+   <figure>
+     <img src="./data/llm-preview.webp" altn>
+   </figure>
+ </div>
 
-    linkStyle default stroke: #FF7400, stroke-width: 2px;
-    
-    style FRDM_iMX fill:#EBE7DD,stroke:#262626,color:#262626
-    style Accelerator fill:#EBE7DD,stroke:#262626,color:#262626
-    style LLM_Studio fill:#HEX #262626,stroke:#000000,color:#F7F5F1
-    style AAF_Server fill:#HEX #262626,stroke:#000000,color:#F7F5F1
-    style proxy fill:#HEX #262626,stroke:#000000,color:#F7F5F1
+ <div align="center">
+   <em> Preview 1. Demonstration of LLM Edge Studio answering a question using Qwen2.5 7B Instruct model. </em>
+   <br></br>
+</div>
 
-    style UI fill:#F9B500,stroke:#262626,color:#262626
-    style Client fill:#69CA00,stroke:#262626,color:#262626
-    style API fill:#69CA00,stroke:#262626,color:#262626
-    style Optimum fill:#0EAFE0,stroke:#262626,color:#262626
-    style Model fill:#FFD800,stroke:#262626,color:#262626
-    style LB fill:#F7F5F1,stroke:#262626,color:#262626
-```
+
+##  📋 Features
+
+Introducing **LLM Edge Studio**: the NXP launcher designed for interaction with compatible *Large Language Models* (LLMs) accelerated by the **Ara240** DNPU at the edge. This application, compatible with FRDM i.MX 95 and FRDM i.MX 8M Plus, enables rapid interaction with locally running LLMs. It uses the eIQ AAF Connector to communicate with the **Ara240** Runtime SDK and provides a user-friendly GUI for model selection and prompt input.
+
+### Software Architecture
+
+![block-diagram](./data/llm-edge-studio-diagram.svg)
 
 ## 💻 Supported Platforms
 
