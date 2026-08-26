@@ -697,12 +697,9 @@ void SubmitPrompt::downloadNextModel() {
           this, &SubmitPrompt::handleDownloadError);
 
   // Prepare command: uvx --from /usr/share/python-wheels/fetch_models-1.0.0-py3-none-any.whl fetch_models
-  QString program = "uvx";
+  QString program = "/usr/libexec/ara2/scripts/fetch_models.py";
   QStringList arguments;
-  arguments << "--from"
-            << "/usr/share/python-wheels/fetch_models-1.0.0-py3-none-any.whl"
-            << "fetch_models"
-            << "--repo-id" << modelId;
+  arguments << "--repo-id" << modelId;
 
   qCDebug(lcSubmitPrompt) << "Running command:" << program << arguments.join(" ");
   cleanGUI();
