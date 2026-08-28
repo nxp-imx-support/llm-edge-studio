@@ -68,6 +68,12 @@ Dialog {
                         font.pointSize: 10
                         font.family: "monospace"
                     }
+
+                    Label {
+                        text: "• nxp/Qwen2.5-Coder-1.5B-Ara240"
+                        font.pointSize: 10
+                        font.family: "monospace"
+                    }
                 }
             }
 

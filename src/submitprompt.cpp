@@ -54,7 +54,8 @@ SubmitPrompt::SubmitPrompt(int endpoint, const QString &group, QObject *parent)
       m_aafConnector(nullptr) {
 
   m_modelsToDownload = QStringList()
-      << "nxp/Qwen2.5-7B-Instruct-Ara240";
+      << "nxp/Qwen2.5-7B-Instruct-Ara240"
+      << "nxp/Qwen2.5-Coder-1.5B-Ara240";
 
   initializeDefaults();
   initializeEndpoint(endpoint, group);
