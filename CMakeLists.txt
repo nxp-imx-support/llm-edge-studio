@@ -19,7 +19,7 @@ endif()
 
 # Define version info
 set(APP_VERSION_MAJOR 2)
-set(APP_VERSION_MINOR 0)
+set(APP_VERSION_MINOR 2)
 set(APP_VERSION_PATCH 0)
 
 # Configure version header

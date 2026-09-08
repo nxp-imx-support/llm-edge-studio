@@ -146,7 +146,7 @@ warning() {
 # Configuration Variables
 # ============================================================================
 readonly PACKAGE_NAME="llm-edge-studio"
-readonly PACKAGE_VERSION="2.0.0"
+readonly PACKAGE_VERSION="2.2.0"
 readonly DEMO_EXEC="run_llm_edge_studio"
 readonly INSTALL_PATH="/usr/bin/"
 readonly DEMO_PATH="${INSTALL_PATH}/${DEMO_EXEC}"
